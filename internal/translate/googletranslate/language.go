@@ -1,13 +1,14 @@
-package translate
+package googletranslate
 
 // https://cloud.google.com/translate/docs/languages
 var (
-	Lang = []string{
+	lang = []string{
 		"Afrikaans",
 		"Albanian",
 		"Amharic",
 		"Arabic",
 		"Armenian",
+		"Auto",
 		"Azerbaijani",
 		"Basque",
 		"Belarusian",
@@ -113,12 +114,13 @@ var (
 		"Yoruba",
 		"Zulu",
 	}
-	LangCode = map[string]string{
+	langCode = map[string]string{
 		"Afrikaans":                     "af",
 		"Albanian":                      "sq",
 		"Amharic":                       "am",
 		"Arabic":                        "ar",
 		"Armenian":                      "hy",
+		"Auto":                          "auto",
 		"Azerbaijani":                   "az",
 		"Basque":                        "eu",
 		"Belarusian":                    "be",

@@ -2,9 +2,10 @@ package main
 
 import (
 	"flag"
-	"gtt/internal/translate"
-	"gtt/internal/ui"
 
+	"github.com/eeeXun/gtt/internal/style"
+	"github.com/eeeXun/gtt/internal/translate"
+	"github.com/eeeXun/gtt/internal/ui"
 	"github.com/rivo/tview"
 )
 
@@ -15,16 +16,20 @@ var (
 	srcLangArg *string = flag.String("src", "", "Set source language")
 	dstLangArg *string = flag.String("dst", "", "Set destination language")
 	// Translate
-	translator = translate.NewTranslator()
+	translator  translate.Translator
+	translators = make(map[string]translate.Translator, len(translate.AllTranslator))
+	// UI style
+	uiStyle = style.NewStyle()
 	// UI
 	app                 = tview.NewApplication()
 	srcInput            = tview.NewTextArea()
 	dstOutput           = tview.NewTextView()
 	defOutput           = tview.NewTextArea()
 	posOutput           = tview.NewTextArea()
+	translatorDropDown  = tview.NewDropDown()
 	srcLangDropDown     = tview.NewDropDown()
 	dstLangDropDown     = tview.NewDropDown()
-	langCycle           = ui.NewUICycle(srcLangDropDown, dstLangDropDown)
+	langCycle           = ui.NewUICycle(srcLangDropDown, dstLangDropDown, translatorDropDown)
 	themeDropDown       = tview.NewDropDown()
 	transparentDropDown = tview.NewDropDown()
 	hideBelowDropDown   = tview.NewDropDown()
@@ -43,9 +48,9 @@ var (
 	translateWindow      = tview.NewFlex()
 	translateAboveWidget = tview.NewFlex()
 	translateBelowWidget = tview.NewFlex()
-	langWindow           = tview.NewFlex()
-	styleWindow          = tview.NewFlex()
-	keyMapWindow         = tview.NewFlex()
+	langPopOut           = tview.NewFlex()
+	stylePopOut          = tview.NewFlex()
+	keyMapPopOut         = tview.NewFlex()
 	mainPage             = tview.NewPages()
 )
 
@@ -57,21 +62,21 @@ func main() {
 	case *showVersion:
 		print(version, "\n")
 	default:
-		SetTermTitle("GTT")
 		configInit()
 		uiInit()
+		SetTermTitle(translator.GetEngineName())
 
 		mainPage.AddPage("translateWindow", translateWindow, true, true)
-		mainPage.AddPage("langWindow", langWindow, true, false)
-		mainPage.AddPage("styleWindow", styleWindow, true, false)
-		mainPage.AddPage("keyMapWindow", keyMapWindow, true, false)
+		mainPage.AddPage("langPopOut", langPopOut, true, false)
+		mainPage.AddPage("stylePopOut", stylePopOut, true, false)
+		mainPage.AddPage("keyMapPopOut", keyMapPopOut, true, false)
 
 		if err := app.SetRoot(mainPage, true).
 			EnableMouse(true).Run(); err != nil {
 			panic(err)
 		}
 
-		// Check if config need to update
+		// Check if config file need to be updated
 		defer updateConfig()
 	}
 }

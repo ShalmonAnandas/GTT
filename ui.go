@@ -2,10 +2,10 @@ package main
 
 import (
 	"fmt"
-	"gtt/internal/color"
-	"gtt/internal/translate"
 	"strconv"
 
+	"github.com/eeeXun/gtt/internal/style"
+	"github.com/eeeXun/gtt/internal/translate"
 	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
 )
@@ -38,16 +38,23 @@ const (
 [#%[1]s]<C-t>[-]
 	Toggle transparent.
 [#%[1]s]<C-\>[-]
-	Toggle Definition & Part of speech
+	Toggle Definition/Example & Part of speech.
 [#%[1]s]<Tab>, <S-Tab>[-]
 	Cycle through the pop out widget.
 [#%[1]s]<1>, <2>, <3>[-]
 	Switch pop out window.`
 )
 
+type Item struct {
+	item       tview.Primitive
+	fixedSize  int
+	proportion int
+	focus      bool
+}
+
 func updateTranslateWindow() {
 	translateWindow.Clear()
-	if hideBelow {
+	if uiStyle.HideBelow {
 		translateWindow.AddItem(translateAboveWidget, 0, 1, true)
 	} else {
 		translateWindow.SetDirection(tview.FlexRow).
@@ -59,21 +66,22 @@ func updateTranslateWindow() {
 func updateBackgroundColor() {
 	// input/output
 	srcInput.SetTextStyle(tcell.StyleDefault.
-		Background(style.BackgroundColor()).
-		Foreground(style.ForegroundColor())).
-		SetBackgroundColor(style.BackgroundColor())
-	dstOutput.SetBackgroundColor(style.BackgroundColor())
+		Background(uiStyle.BackgroundColor()).
+		Foreground(uiStyle.ForegroundColor())).
+		SetBackgroundColor(uiStyle.BackgroundColor())
+	dstOutput.SetBackgroundColor(uiStyle.BackgroundColor())
 	defOutput.SetTextStyle(tcell.StyleDefault.
-		Background(style.BackgroundColor()).
-		Foreground(style.ForegroundColor())).
-		SetBackgroundColor(style.BackgroundColor())
+		Background(uiStyle.BackgroundColor()).
+		Foreground(uiStyle.ForegroundColor())).
+		SetBackgroundColor(uiStyle.BackgroundColor())
 	posOutput.SetTextStyle(tcell.StyleDefault.
-		Background(style.BackgroundColor()).
-		Foreground(style.ForegroundColor())).
-		SetBackgroundColor(style.BackgroundColor())
+		Background(uiStyle.BackgroundColor()).
+		Foreground(uiStyle.ForegroundColor())).
+		SetBackgroundColor(uiStyle.BackgroundColor())
 
 	// dropdown
 	for _, dropdown := range []*tview.DropDown{
+		translatorDropDown,
 		srcLangDropDown,
 		dstLangDropDown,
 		themeDropDown,
@@ -82,86 +90,87 @@ func updateBackgroundColor() {
 		srcBorderDropDown,
 		dstBorderDropDown} {
 		dropdown.SetListStyles(tcell.StyleDefault.
-			Background(style.BackgroundColor()).
-			Foreground(style.ForegroundColor()),
+			Background(uiStyle.BackgroundColor()).
+			Foreground(uiStyle.ForegroundColor()),
 			tcell.StyleDefault.
-				Background(style.SelectedColor()).
-				Foreground(style.PrefixColor())).
-			SetBackgroundColor(style.BackgroundColor())
+				Background(uiStyle.SelectedColor()).
+				Foreground(uiStyle.PrefixColor())).
+			SetBackgroundColor(uiStyle.BackgroundColor())
 	}
 
 	// key map
-	keyMapMenu.SetBackgroundColor(style.BackgroundColor())
+	keyMapMenu.SetBackgroundColor(uiStyle.BackgroundColor())
 }
 
 func updateBorderColor() {
 	// input/output
-	srcInput.SetBorderColor(style.SrcBorderColor()).
-		SetTitleColor(style.SrcBorderColor())
-	dstOutput.SetBorderColor(style.DstBorderColor()).
-		SetTitleColor(style.DstBorderColor())
-	defOutput.SetBorderColor(style.SrcBorderColor()).
-		SetTitleColor(style.SrcBorderColor())
-	posOutput.SetBorderColor(style.DstBorderColor()).
-		SetTitleColor(style.DstBorderColor())
+	srcInput.SetBorderColor(uiStyle.SrcBorderColor()).
+		SetTitleColor(uiStyle.SrcBorderColor())
+	dstOutput.SetBorderColor(uiStyle.DstBorderColor()).
+		SetTitleColor(uiStyle.DstBorderColor())
+	defOutput.SetBorderColor(uiStyle.SrcBorderColor()).
+		SetTitleColor(uiStyle.SrcBorderColor())
+	posOutput.SetBorderColor(uiStyle.DstBorderColor()).
+		SetTitleColor(uiStyle.DstBorderColor())
 
 	// dropdown
 	for _, srcDropDown := range []*tview.DropDown{srcLangDropDown, srcBorderDropDown} {
-		srcDropDown.SetBorderColor(style.SrcBorderColor()).
-			SetTitleColor(style.SrcBorderColor())
+		srcDropDown.SetBorderColor(uiStyle.SrcBorderColor()).
+			SetTitleColor(uiStyle.SrcBorderColor())
 	}
 	for _, dstDropDown := range []*tview.DropDown{dstLangDropDown, dstBorderDropDown} {
-		dstDropDown.SetBorderColor(style.DstBorderColor()).
-			SetTitleColor(style.DstBorderColor())
+		dstDropDown.SetBorderColor(uiStyle.DstBorderColor()).
+			SetTitleColor(uiStyle.DstBorderColor())
 	}
 }
 
 func updateNonConfigColor() {
 	// input/output
 	srcInput.SetSelectedStyle(tcell.StyleDefault.
-		Background(style.SelectedColor()).
-		Foreground(style.ForegroundColor()))
-	dstOutput.SetTextColor(style.ForegroundColor())
+		Background(uiStyle.SelectedColor()).
+		Foreground(uiStyle.ForegroundColor()))
+	dstOutput.SetTextColor(uiStyle.ForegroundColor())
 	defOutput.SetSelectedStyle(tcell.StyleDefault.
-		Background(style.SelectedColor()).
-		Foreground(style.ForegroundColor()))
+		Background(uiStyle.SelectedColor()).
+		Foreground(uiStyle.ForegroundColor()))
 	posOutput.SetSelectedStyle(tcell.StyleDefault.
-		Background(style.SelectedColor()).
-		Foreground(style.ForegroundColor()))
+		Background(uiStyle.SelectedColor()).
+		Foreground(uiStyle.ForegroundColor()))
 
 	// dropdown
 	for _, noLabelDropDown := range []*tview.DropDown{srcLangDropDown, dstLangDropDown} {
-		noLabelDropDown.SetFieldBackgroundColor(style.SelectedColor()).
-			SetFieldTextColor(style.ForegroundColor()).
-			SetPrefixTextColor(style.PrefixColor())
+		noLabelDropDown.SetFieldBackgroundColor(uiStyle.SelectedColor()).
+			SetFieldTextColor(uiStyle.ForegroundColor()).
+			SetPrefixTextColor(uiStyle.PrefixColor())
 	}
 	for _, labelDropDown := range []*tview.DropDown{
+		translatorDropDown,
 		themeDropDown,
 		transparentDropDown,
 		hideBelowDropDown,
 		srcBorderDropDown,
 		dstBorderDropDown} {
-		labelDropDown.SetLabelColor(style.LabelColor()).
-			SetFieldBackgroundColor(style.SelectedColor()).
-			SetFieldTextColor(style.ForegroundColor()).
-			SetPrefixTextColor(style.PrefixColor())
+		labelDropDown.SetLabelColor(uiStyle.LabelColor()).
+			SetFieldBackgroundColor(uiStyle.SelectedColor()).
+			SetFieldTextColor(uiStyle.ForegroundColor()).
+			SetPrefixTextColor(uiStyle.PrefixColor())
 	}
 
 	// button
 	for _, button := range []*tview.Button{langButton, styleButton, keyMapButton} {
-		button.SetLabelColor(style.ForegroundColor()).
-			SetBackgroundColorActivated(style.PressColor()).
-			SetLabelColorActivated(style.ForegroundColor()).
-			SetBackgroundColor(style.SelectedColor())
+		button.SetLabelColor(uiStyle.ForegroundColor()).
+			SetBackgroundColorActivated(uiStyle.PressColor()).
+			SetLabelColorActivated(uiStyle.ForegroundColor()).
+			SetBackgroundColor(uiStyle.SelectedColor())
 	}
 
 	// key map
-	keyMapMenu.SetTextColor(style.ForegroundColor()).
+	keyMapMenu.SetTextColor(uiStyle.ForegroundColor()).
 		SetText(fmt.Sprintf(keyMapText,
 			fmt.Sprintf("%.6x",
-				style.HighLightColor().TrueColor().Hex()))).
-		SetBorderColor(style.HighLightColor()).
-		SetTitleColor(style.HighLightColor())
+				uiStyle.HighLightColor().TrueColor().Hex()))).
+		SetBorderColor(uiStyle.HighLightColor()).
+		SetTitleColor(uiStyle.HighLightColor())
 }
 
 func updateAllColor() {
@@ -170,18 +179,32 @@ func updateAllColor() {
 	updateNonConfigColor()
 }
 
-// Update title and option
-func updateTitle() {
-	srcInput.SetTitle(translator.SrcLang)
-	dstOutput.SetTitle(translator.DstLang)
+// SetSelectedFunc of DropDown need to update when options change
+func updateLangDropDown() {
+	srcLangDropDown.SetOptions(translator.GetAllLang(),
+		func(text string, index int) {
+			translator.SetSrcLang(text)
+			srcInput.SetTitle(text)
+			srcLangDropDown.SetTitle(text)
+		})
+	dstLangDropDown.SetOptions(translator.GetAllLang(),
+		func(text string, index int) {
+			translator.SetDstLang(text)
+			dstOutput.SetTitle(text)
+			dstLangDropDown.SetTitle(text)
+		})
+}
+
+// Update language title and option
+func updateCurrentLang() {
+	srcInput.SetTitle(translator.GetSrcLang())
+	dstOutput.SetTitle(translator.GetDstLang())
 	srcLangDropDown.SetCurrentOption(
-		IndexOf(translator.SrcLang,
-			translate.Lang)).
-		SetTitle(translator.SrcLang)
+		IndexOf(translator.GetSrcLang(), translator.GetAllLang())).
+		SetTitle(translator.GetSrcLang())
 	dstLangDropDown.SetCurrentOption(
-		IndexOf(translator.DstLang,
-			translate.Lang)).
-		SetTitle(translator.DstLang)
+		IndexOf(translator.GetDstLang(), translator.GetAllLang())).
+		SetTitle(translator.GetDstLang())
 }
 
 func attachButton() *tview.Flex {
@@ -195,50 +218,66 @@ func attachButton() *tview.Flex {
 		AddItem(nil, 0, 1, false)
 }
 
+// If center is true, it will center the items
+func attachItems(center bool, direction int, items ...Item) *tview.Flex {
+	container := tview.NewFlex().SetDirection(direction)
+	if center {
+		container.AddItem(nil, 0, 1, false)
+	}
+	for _, item := range items {
+		container.AddItem(item.item, item.fixedSize, item.proportion, item.focus)
+	}
+	if center {
+		container.AddItem(nil, 0, 1, false)
+	}
+	return container
+}
+
 func uiInit() {
 	// input/output
 	srcInput.SetBorder(true)
 	dstOutput.SetBorder(true)
-	defOutput.SetBorder(true).SetTitle("Definition")
+	defOutput.SetBorder(true).SetTitle("Definition/Example")
 	posOutput.SetBorder(true).SetTitle("Part of speech")
 
 	// dropdown
-	for _, langDropDown := range []*tview.DropDown{srcLangDropDown, dstLangDropDown} {
-		langDropDown.SetOptions(translate.Lang, nil).
-			SetBorder(true)
-	}
+	translatorDropDown.SetLabel("Translator: ").
+		SetOptions(translate.AllTranslator, nil).
+		SetCurrentOption(IndexOf(translator.GetEngineName(), translate.AllTranslator))
+	srcLangDropDown.SetBorder(true)
+	dstLangDropDown.SetBorder(true)
 	themeDropDown.SetLabel("Theme: ").
-		SetOptions(color.AllTheme, nil).
-		SetCurrentOption(IndexOf(style.Theme, color.AllTheme))
+		SetOptions(style.AllTheme, nil).
+		SetCurrentOption(IndexOf(uiStyle.Theme, style.AllTheme))
 	hideBelowDropDown.SetLabel("Hide below: ").
 		SetOptions([]string{"true", "false"}, nil).
 		SetCurrentOption(
-			IndexOf(strconv.FormatBool(hideBelow),
+			IndexOf(strconv.FormatBool(uiStyle.HideBelow),
 				[]string{"true", "false"}))
 	transparentDropDown.SetLabel("Transparent: ").
 		SetOptions([]string{"true", "false"}, nil).
 		SetCurrentOption(
-			IndexOf(strconv.FormatBool(style.Transparent),
+			IndexOf(strconv.FormatBool(uiStyle.Transparent),
 				[]string{"true", "false"}))
 	srcBorderDropDown.SetLabel("Border Color: ").
-		SetOptions(color.Palette, nil).
+		SetOptions(style.Palette, nil).
 		SetCurrentOption(
-			IndexOf(style.SrcBorderStr(),
-				color.Palette)).
+			IndexOf(uiStyle.SrcBorderStr(),
+				style.Palette)).
 		SetBorder(true).
 		SetTitle("Source")
 	dstBorderDropDown.SetLabel("Border Color: ").
-		SetOptions(color.Palette, nil).
+		SetOptions(style.Palette, nil).
 		SetCurrentOption(
-			IndexOf(style.DstBorderStr(),
-				color.Palette)).
+			IndexOf(uiStyle.DstBorderStr(),
+				style.Palette)).
 		SetBorder(true).
 		SetTitle("Destination")
 
 	// key map
 	keyMapMenu.SetDynamicColors(true).
 		SetText(fmt.Sprintf(keyMapText,
-			fmt.Sprintf("%.6x", style.HighLightColor().TrueColor().Hex()))).
+			fmt.Sprintf("%.6x", uiStyle.HighLightColor().TrueColor().Hex()))).
 		SetBorder(true).
 		SetTitle("Key Map")
 
@@ -250,51 +289,53 @@ func uiInit() {
 		AddItem(defOutput, 0, 1, false).
 		AddItem(posOutput, 0, 1, false)
 	updateTranslateWindow()
-	langWindow.SetDirection(tview.FlexRow).
+	langPopOut.SetDirection(tview.FlexRow).
 		AddItem(nil, 0, 1, false).
-		AddItem(tview.NewFlex().SetDirection(tview.FlexColumn).
-			AddItem(nil, 0, 1, false).
-			AddItem(srcLangDropDown, langStrMaxLength, 1, true).
-			AddItem(dstLangDropDown, langStrMaxLength, 1, false).
-			AddItem(nil, 0, 1, false),
+		AddItem(attachItems(true, tview.FlexColumn,
+			Item{item: attachItems(false, tview.FlexRow,
+				Item{item: attachItems(true, tview.FlexColumn,
+					Item{item: attachItems(false, tview.FlexRow,
+						Item{item: translatorDropDown, fixedSize: 0, proportion: 1, focus: false}),
+						fixedSize: 0, proportion: 2, focus: false}),
+					fixedSize: 1, proportion: 1, focus: false},
+				Item{item: attachItems(false, tview.FlexColumn,
+					Item{item: srcLangDropDown, fixedSize: 0, proportion: 1, focus: true},
+					Item{item: dstLangDropDown, fixedSize: 0, proportion: 1, focus: false}),
+					fixedSize: 0, proportion: 1, focus: true}),
+				fixedSize: 2 * langStrMaxLength, proportion: 1, focus: true}),
 			popOutWindowHeight, 1, true).
 		AddItem(attachButton(), 1, 1, false).
 		AddItem(nil, 0, 1, false)
-	styleWindow.SetDirection(tview.FlexRow).
+	stylePopOut.SetDirection(tview.FlexRow).
 		AddItem(nil, 0, 1, false).
-		AddItem(tview.NewFlex().SetDirection(tview.FlexColumn).
-			AddItem(nil, 0, 1, false).
-			AddItem(tview.NewFlex().SetDirection(tview.FlexRow).
-				AddItem(tview.NewFlex().SetDirection(tview.FlexColumn).
-					AddItem(nil, 0, 1, false).
-					AddItem(tview.NewFlex().SetDirection(tview.FlexRow).
-						AddItem(themeDropDown, 0, 1, true).
-						AddItem(transparentDropDown, 0, 1, false).
-						AddItem(hideBelowDropDown, 0, 1, false),
-						0, 1, true).
-					AddItem(nil, 0, 1, false),
-					3, 1, true).
-				AddItem(tview.NewFlex().SetDirection(tview.FlexColumn).
-					AddItem(srcBorderDropDown, 0, 1, false).
-					AddItem(dstBorderDropDown, 0, 1, false),
-					0, 1, false),
-				2*langStrMaxLength, 1, true).
-			AddItem(nil, 0, 1, false),
+		AddItem(attachItems(true, tview.FlexColumn,
+			Item{item: attachItems(false, tview.FlexRow,
+				Item{item: attachItems(true, tview.FlexColumn,
+					Item{item: attachItems(false, tview.FlexRow,
+						Item{item: themeDropDown, fixedSize: 0, proportion: 1, focus: true},
+						Item{item: transparentDropDown, fixedSize: 0, proportion: 1, focus: false},
+						Item{item: hideBelowDropDown, fixedSize: 0, proportion: 1, focus: false}),
+						fixedSize: 0, proportion: 1, focus: true}),
+					fixedSize: 3, proportion: 1, focus: true},
+				Item{item: attachItems(false, tview.FlexColumn,
+					Item{item: srcBorderDropDown, fixedSize: 0, proportion: 1, focus: false},
+					Item{item: dstBorderDropDown, fixedSize: 0, proportion: 1, focus: false}),
+					fixedSize: 0, proportion: 1, focus: false}),
+				fixedSize: 2 * langStrMaxLength, proportion: 1, focus: true}),
 			popOutWindowHeight, 1, true).
 		AddItem(attachButton(), 1, 1, false).
 		AddItem(nil, 0, 1, false)
-	keyMapWindow.SetDirection(tview.FlexRow).
+	keyMapPopOut.SetDirection(tview.FlexRow).
 		AddItem(nil, 0, 1, false).
-		AddItem(tview.NewFlex().SetDirection(tview.FlexColumn).
-			AddItem(nil, 0, 1, false).
-			AddItem(keyMapMenu, 2*langStrMaxLength, 1, true).
-			AddItem(nil, 0, 1, false),
+		AddItem(attachItems(true, tview.FlexColumn,
+			Item{item: keyMapMenu, fixedSize: 2 * langStrMaxLength, proportion: 1, focus: true}),
 			popOutWindowHeight, 1, true).
 		AddItem(attachButton(), 1, 1, false).
 		AddItem(nil, 0, 1, false)
 
 	updateAllColor()
-	updateTitle()
+	updateLangDropDown()
+	updateCurrentLang()
 
 	// handler
 	mainPage.SetInputCapture(mainPageHandler)
@@ -318,68 +359,65 @@ func uiInit() {
 			return event
 		})
 	}
-	langWindow.SetInputCapture(popOutWindowHandler)
-	styleWindow.SetInputCapture(popOutWindowHandler)
-	keyMapWindow.SetInputCapture(popOutWindowHandler)
-	srcLangDropDown.SetDoneFunc(langDropDownHandler).
+	langPopOut.SetInputCapture(popOutHandler)
+	stylePopOut.SetInputCapture(popOutHandler)
+	keyMapPopOut.SetInputCapture(popOutHandler)
+	translatorDropDown.SetDoneFunc(langDropDownHandler).
 		SetSelectedFunc(func(text string, index int) {
-			translator.SrcLang = text
-			srcInput.SetTitle(text)
-			srcLangDropDown.SetTitle(text)
+			translator = translators[text]
+			updateLangDropDown()
+			updateCurrentLang()
+			SetTermTitle(translator.GetEngineName())
 		})
-	dstLangDropDown.SetDoneFunc(langDropDownHandler).
-		SetSelectedFunc(func(text string, index int) {
-			translator.DstLang = text
-			dstOutput.SetTitle(text)
-			dstLangDropDown.SetTitle(text)
-		})
+	srcLangDropDown.SetDoneFunc(langDropDownHandler)
+	dstLangDropDown.SetDoneFunc(langDropDownHandler)
 	themeDropDown.SetDoneFunc(styleDropDownHandler).
 		SetSelectedFunc(func(text string, index int) {
-			style.Theme = text
+			uiStyle.Theme = text
 			updateAllColor()
 		})
 	transparentDropDown.SetDoneFunc(styleDropDownHandler).
 		SetSelectedFunc(func(text string, index int) {
-			style.Transparent, _ = strconv.ParseBool(text)
+			uiStyle.Transparent, _ = strconv.ParseBool(text)
 			updateBackgroundColor()
 		})
 	hideBelowDropDown.SetDoneFunc(styleDropDownHandler).
 		SetSelectedFunc(func(text string, index int) {
-			hideBelow, _ = strconv.ParseBool(text)
+			uiStyle.HideBelow, _ = strconv.ParseBool(text)
 			updateTranslateWindow()
 		})
 	srcBorderDropDown.SetDoneFunc(styleDropDownHandler).
 		SetSelectedFunc(func(text string, index int) {
-			style.SetSrcBorderColor(text)
+			uiStyle.SetSrcBorderColor(text)
 			updateBorderColor()
 		})
 	dstBorderDropDown.SetDoneFunc(styleDropDownHandler).
 		SetSelectedFunc(func(text string, index int) {
-			style.SetDstBorderColor(text)
+			uiStyle.SetDstBorderColor(text)
 			updateBorderColor()
 		})
 	keyMapMenu.SetDoneFunc(func(key tcell.Key) {
 		switch key {
 		case tcell.KeyEsc:
-			mainPage.HidePage("keyMapWindow")
+			mainPage.HidePage("keyMapPopOut")
 		}
 	})
 	langButton.SetSelectedFunc(func() {
-		mainPage.HidePage("styleWindow")
-		mainPage.HidePage("keyMapWindow")
-		mainPage.ShowPage("langWindow")
+		mainPage.HidePage("stylePopOut")
+		mainPage.HidePage("keyMapPopOut")
+		mainPage.ShowPage("langPopOut")
 		app.SetFocus(langCycle.GetCurrentUI())
 	})
 	styleButton.SetSelectedFunc(func() {
-		mainPage.HidePage("langWindow")
-		mainPage.HidePage("keyMapWindow")
-		mainPage.ShowPage("styleWindow")
+		mainPage.HidePage("langPopOut")
+		mainPage.HidePage("keyMapPopOut")
+		mainPage.ShowPage("stylePopOut")
 		app.SetFocus(styleCycle.GetCurrentUI())
 	})
 	keyMapButton.SetSelectedFunc(func() {
-		mainPage.HidePage("langWindow")
-		mainPage.HidePage("styleWindow")
-		mainPage.ShowPage("keyMapWindow")
+		mainPage.HidePage("langPopOut")
+		mainPage.HidePage("stylePopOut")
+		mainPage.ShowPage("keyMapPopOut")
 	})
 }
 
@@ -389,16 +427,16 @@ func mainPageHandler(event *tcell.EventKey) *tcell.EventKey {
 	switch key {
 	case tcell.KeyCtrlT:
 		// Toggle transparent
-		style.Transparent = !style.Transparent
+		uiStyle.Transparent = !uiStyle.Transparent
 		updateBackgroundColor()
 		transparentDropDown.SetCurrentOption(
-			IndexOf(strconv.FormatBool(style.Transparent),
+			IndexOf(strconv.FormatBool(uiStyle.Transparent),
 				[]string{"true", "false"}))
 	case tcell.KeyCtrlBackslash:
-		hideBelow = !hideBelow
+		uiStyle.HideBelow = !uiStyle.HideBelow
 		updateTranslateWindow()
 		hideBelowDropDown.SetCurrentOption(
-			IndexOf(strconv.FormatBool(hideBelow),
+			IndexOf(strconv.FormatBool(uiStyle.HideBelow),
 				[]string{"true", "false"}))
 	}
 
@@ -410,7 +448,7 @@ func translateWindowHandler(event *tcell.EventKey) *tcell.EventKey {
 
 	switch key {
 	case tcell.KeyEsc:
-		mainPage.ShowPage("langWindow")
+		mainPage.ShowPage("langPopOut")
 		app.SetFocus(langCycle.GetCurrentUI())
 	case tcell.KeyCtrlJ:
 		message := srcInput.GetText()
@@ -444,8 +482,8 @@ func translateWindowHandler(event *tcell.EventKey) *tcell.EventKey {
 			CopyToClipboard(text[:len(text)-1])
 		}
 	case tcell.KeyCtrlS:
-		translator.SrcLang, translator.DstLang = translator.DstLang, translator.SrcLang
-		updateTitle()
+		translator.SwapLang()
+		updateCurrentLang()
 		srcText := srcInput.GetText()
 		dstText := dstOutput.GetText(false)
 		if len(dstText) > 0 {
@@ -457,13 +495,13 @@ func translateWindowHandler(event *tcell.EventKey) *tcell.EventKey {
 		dstOutput.SetText(srcText)
 	case tcell.KeyCtrlO:
 		// Play source sound
-		if translator.SoundLock.Available() {
+		if translator.LockAvailable() {
 			message := srcInput.GetText()
 			// Only play when message exist
 			if len(message) > 0 {
-				translator.SoundLock.Acquire()
+				translator.AcquireLock()
 				go func() {
-					err := translator.PlaySound(translator.SrcLang, message)
+					err := translator.PlayTTS(translator.GetSrcLang(), message)
 					if err != nil {
 						srcInput.SetText(err.Error(), true)
 					}
@@ -473,13 +511,13 @@ func translateWindowHandler(event *tcell.EventKey) *tcell.EventKey {
 		}
 	case tcell.KeyCtrlP:
 		// Play destination sound
-		if translator.SoundLock.Available() {
+		if translator.LockAvailable() {
 			message := dstOutput.GetText(false)
 			// Only play when message exist
 			if len(message) > 0 {
-				translator.SoundLock.Acquire()
+				translator.AcquireLock()
 				go func() {
-					err := translator.PlaySound(translator.DstLang, message)
+					err := translator.PlayTTS(translator.GetDstLang(), message)
 					if err != nil {
 						dstOutput.SetText(err.Error())
 					}
@@ -488,30 +526,30 @@ func translateWindowHandler(event *tcell.EventKey) *tcell.EventKey {
 		}
 	case tcell.KeyCtrlX:
 		// Stop play sound
-		translator.SoundLock.Stop = true
+		translator.StopTTS()
 	}
 
 	return event
 }
 
-func popOutWindowHandler(event *tcell.EventKey) *tcell.EventKey {
+func popOutHandler(event *tcell.EventKey) *tcell.EventKey {
 	ch := event.Rune()
 
 	switch ch {
 	case '1':
-		mainPage.HidePage("styleWindow")
-		mainPage.HidePage("keyMapWindow")
-		mainPage.ShowPage("langWindow")
+		mainPage.HidePage("stylePopOut")
+		mainPage.HidePage("keyMapPopOut")
+		mainPage.ShowPage("langPopOut")
 		app.SetFocus(langCycle.GetCurrentUI())
 	case '2':
-		mainPage.HidePage("langWindow")
-		mainPage.HidePage("keyMapWindow")
-		mainPage.ShowPage("styleWindow")
+		mainPage.HidePage("langPopOut")
+		mainPage.HidePage("keyMapPopOut")
+		mainPage.ShowPage("stylePopOut")
 		app.SetFocus(styleCycle.GetCurrentUI())
 	case '3':
-		mainPage.HidePage("langWindow")
-		mainPage.HidePage("styleWindow")
-		mainPage.ShowPage("keyMapWindow")
+		mainPage.HidePage("langPopOut")
+		mainPage.HidePage("stylePopOut")
+		mainPage.ShowPage("keyMapPopOut")
 	}
 
 	return event
@@ -526,7 +564,7 @@ func langDropDownHandler(key tcell.Key) {
 		langCycle.Decrease()
 		app.SetFocus(langCycle.GetCurrentUI())
 	case tcell.KeyEsc:
-		mainPage.HidePage("langWindow")
+		mainPage.HidePage("langPopOut")
 	}
 }
 
@@ -539,6 +577,6 @@ func styleDropDownHandler(key tcell.Key) {
 		styleCycle.Decrease()
 		app.SetFocus(styleCycle.GetCurrentUI())
 	case tcell.KeyEsc:
-		mainPage.HidePage("styleWindow")
+		mainPage.HidePage("stylePopOut")
 	}
 }

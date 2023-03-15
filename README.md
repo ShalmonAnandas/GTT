@@ -1,6 +1,12 @@
-# GTT
+# gtt
 
-Google Translate TUI
+Google Translate TUI (Originally)
+
+Supported Translator:
+[`ApertiumTranslate`](https://www.apertium.org/),
+[`ArgosTranslate`](https://translate.argosopentech.com/),
+[`GoogleTranslate`](https://translate.google.com/),
+[`ReversoTranslate`](https://www.reverso.net/text-translation)
 
 ## ScreenShot
 
@@ -8,8 +14,26 @@ Google Translate TUI
 
 ## Install
 
+### Arch Linux (AUR)
+
 ```
-go get && go build
+yay -S gtt-bin
+```
+
+### Prebuild
+
+Binary file is available in [Release Page](https://github.com/eeeXun/gtt/releases) for Linux and macOS on x86_64.
+
+### From source
+
+```
+go install github.com/eeeXun/gtt@latest
+```
+
+### Run on Docker
+
+```
+docker run -it eeexun/gtt
 ```
 
 ## Language in argument
@@ -20,7 +44,12 @@ You can pass `-src` and `-dst` in argument to set source and destination languag
 gtt -src "English" -dst "Chinese (Traditional)"
 ```
 
-See language on [Google Language support](https://cloud.google.com/translate/docs/languages)
+See language on:
+
+- [Apertium Translate](https://www.apertium.org/) for `ApertiumTranslate`
+- [argosopentech/argos-translate](https://github.com/argosopentech/argos-translate#supported-languages) for `ArgosTranslate`
+- [Google Language support](https://cloud.google.com/translate/docs/languages) for `GoogleTranslate`
+- [Reverso Translation](https://www.reverso.net/text-translation) for `ReversoTranslate`
 
 ## Key Map
 
@@ -61,7 +90,7 @@ Stop play sound.
 Toggle transparent.
 
 `<C-\>`
-Toggle Definition & Part of speech
+Toggle Definition/Example & Part of speech.
 
 `<Tab>`, `<S-Tab>`
 Cycle through the pop out widget.
@@ -71,13 +100,18 @@ Switch pop out window.
 
 ## Dependencies
 
-`xclip` For Linux to copy text.
+[`xclip`](https://github.com/astrand/xclip) for Linux/X11 to copy text.
+
+[`wl-clipboard`](https://github.com/bugaevc/wl-clipboard) for Linux/Wayland to copy text.
 
 `pbcopy` For macOS to copy text.
 
 ## Credit
 
-[soimort/translate-shell](https://github.com/soimort/translate-shell) For translation URL.
+[soimort/translate-shell](https://github.com/soimort/translate-shell),
+[SimplyTranslate-Engines](https://codeberg.org/SimpleWeb/SimplyTranslate-Engines),
+[s0ftik3/reverso-api](https://github.com/s0ftik3/reverso-api)
+For translation URL.
 
 [snsd0805/GoogleTranslate-TUI](https://github.com/snsd0805/GoogleTranslate-TUI) For inspiration.
 
