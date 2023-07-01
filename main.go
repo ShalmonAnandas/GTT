@@ -20,6 +20,8 @@ var (
 	translators = make(map[string]translate.Translator, len(translate.AllTranslator))
 	// UI style
 	uiStyle = style.NewStyle()
+	// keyMaps
+	keyMaps = make(map[string]string)
 	// UI
 	app                 = tview.NewApplication()
 	srcInput            = tview.NewTextArea()
@@ -65,11 +67,6 @@ func main() {
 		configInit()
 		uiInit()
 		SetTermTitle(translator.GetEngineName())
-
-		mainPage.AddPage("translateWindow", translateWindow, true, true)
-		mainPage.AddPage("langPopOut", langPopOut, true, false)
-		mainPage.AddPage("stylePopOut", stylePopOut, true, false)
-		mainPage.AddPage("keyMapPopOut", keyMapPopOut, true, false)
 
 		if err := app.SetRoot(mainPage, true).
 			EnableMouse(true).Run(); err != nil {

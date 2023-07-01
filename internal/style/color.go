@@ -5,10 +5,10 @@ import (
 )
 
 var (
-	AllTheme = []string{"Gruvbox", "Nord"}
+	AllTheme = []string{"gruvbox", "nord"}
 	Palette  = []string{"red", "green", "yellow", "blue", "purple", "cyan", "orange"}
 	themes   = map[string]map[string]tcell.Color{
-		"Gruvbox": {
+		"gruvbox": {
 			"bg":     tcell.NewHexColor(0x282828),
 			"fg":     tcell.NewHexColor(0xebdbb2),
 			"gray":   tcell.NewHexColor(0x665c54),
@@ -20,7 +20,7 @@ var (
 			"cyan":   tcell.NewHexColor(0x8ec07c),
 			"orange": tcell.NewHexColor(0xfe8019),
 		},
-		"Nord": {
+		"nord": {
 			"bg":     tcell.NewHexColor(0x3b4252),
 			"fg":     tcell.NewHexColor(0xeceff4),
 			"gray":   tcell.NewHexColor(0x4c566a),
@@ -34,3 +34,11 @@ var (
 		},
 	}
 )
+
+func NewTheme(name string, palette map[string]int32) {
+	AllTheme = append(AllTheme, name)
+	themes[name] = make(map[string]tcell.Color)
+	for color, rgb := range palette {
+		themes[name][color] = tcell.NewHexColor(rgb)
+	}
+}

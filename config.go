@@ -4,43 +4,92 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/eeeXun/gtt/internal/style"
 	"github.com/eeeXun/gtt/internal/translate"
-	config "github.com/spf13/viper"
+	"github.com/spf13/viper"
+)
+
+var (
+	// Main config
+	config = viper.New()
 )
 
 // Search XDG_CONFIG_HOME or $HOME/.config
 func configInit() {
 	var (
 		defaultConfigPath string
-		defaultConfig     = map[string]interface{}{
-			"hide_below":                             false,
-			"transparent":                            false,
-			"theme":                                  "Gruvbox",
-			"source.border_color":                    "red",
-			"destination.border_color":               "blue",
-			"source.language.apertiumtranslate":      "English",
-			"destination.language.apertiumtranslate": "English",
-			"source.language.argostranslate":         "English",
-			"destination.language.argostranslate":    "English",
-			"source.language.googletranslate":        "English",
-			"destination.language.googletranslate":   "English",
-			"source.language.reversotranslate":       "English",
-			"destination.language.reversotranslate":  "English",
-			"translator":                             "ArgosTranslate",
+		themeConfig       = viper.New()
+		keyMapConfig      = viper.New()
+		defaultKeyMaps    = map[string]string{
+			"exit":               "C-c",
+			"translate":          "C-j",
+			"swap_language":      "C-s",
+			"clear":              "C-q",
+			"copy_selected":      "C-y",
+			"copy_source":        "C-g",
+			"copy_destination":   "C-r",
+			"tts_source":         "C-o",
+			"tts_destination":    "C-p",
+			"stop_tts":           "C-x",
+			"toggle_transparent": "C-t",
+			"toggle_below":       "C-\\",
+		}
+		defaultConfig = map[string]interface{}{
+			"hide_below":                    false,
+			"transparent":                   false,
+			"theme":                         "gruvbox",
+			"source.border_color":           "red",
+			"destination.border_color":      "blue",
+			"source.language.apertium":      "English",
+			"destination.language.apertium": "English",
+			"source.language.argos":         "English",
+			"destination.language.argos":    "English",
+			"source.language.bing":          "English",
+			"destination.language.bing":     "English",
+			"source.language.chatgpt":       "English",
+			"destination.language.chatgpt":  "English",
+			"source.language.deepl":         "English",
+			"destination.language.deepl":    "English",
+			"source.language.google":        "English",
+			"destination.language.google":   "English",
+			"source.language.reverso":       "English",
+			"destination.language.reverso":  "English",
+			"translator":                    "Google",
 		}
 	)
 
 	config.SetConfigName("gtt")
-	config.SetConfigType("yaml")
+	themeConfig.SetConfigName("theme")
+	keyMapConfig.SetConfigName("keymap")
+	for _, c := range []*viper.Viper{config, themeConfig, keyMapConfig} {
+		c.SetConfigType("yaml")
+	}
 	if len(os.Getenv("XDG_CONFIG_HOME")) > 0 {
 		defaultConfigPath = os.Getenv("XDG_CONFIG_HOME") + "/gtt"
-		config.AddConfigPath(defaultConfigPath)
+		for _, c := range []*viper.Viper{config, themeConfig, keyMapConfig} {
+			c.AddConfigPath(defaultConfigPath)
+		}
 	} else {
 		defaultConfigPath = os.Getenv("HOME") + "/.config/gtt"
 	}
-	config.AddConfigPath("$HOME/.config/gtt")
+	for _, c := range []*viper.Viper{config, themeConfig, keyMapConfig} {
+		c.AddConfigPath("$HOME/.config/gtt")
+	}
 
-	// Create config file if not exists
+	// Import theme if file exists
+	if err := themeConfig.ReadInConfig(); err == nil {
+		var (
+			palate = make(map[string]int32)
+			colors = []string{"bg", "fg", "gray", "red", "green", "yellow", "blue", "purple", "cyan", "orange"}
+		)
+		for name := range themeConfig.AllSettings() {
+			for _, color := range colors {
+				palate[color] = themeConfig.GetInt32(fmt.Sprintf("%s.%s", name, color))
+			}
+			style.NewTheme(name, palate)
+		}
+	}
+	// Create config file if it does not exist
 	// Otherwise check if config value is missing
 	if err := config.ReadInConfig(); err != nil {
 		for key, value := range defaultConfig {
@@ -58,12 +107,38 @@ func configInit() {
 				missing = true
 			}
 		}
+		// Set to default theme if theme in config does not exist
+		if IndexOf(config.GetString("theme"), style.AllTheme) < 0 {
+			config.Set("theme", defaultConfig["theme"])
+			missing = true
+		}
+		// Set to default translator if translator in config does not exist
+		if IndexOf(config.GetString("translator"), translate.AllTranslator) < 0 {
+			config.Set("translator", defaultConfig["translator"])
+			missing = true
+		}
 		if missing {
 			config.WriteConfig()
 		}
 	}
 
-	// setup
+	// Setup key map
+	// If keymap file exist and action in file exist, then set the keyMap
+	// Otherwise, set to defaultKeyMap
+	if err := keyMapConfig.ReadInConfig(); err == nil {
+		for action, key := range defaultKeyMaps {
+			if keyMapConfig.Get(action) == nil {
+				keyMaps[action] = key
+			} else {
+				keyMaps[action] = keyMapConfig.GetString(action)
+			}
+		}
+	} else {
+		for action, key := range defaultKeyMaps {
+			keyMaps[action] = key
+		}
+	}
+	// Setup
 	for _, name := range translate.AllTranslator {
 		translators[name] = translate.NewTranslator(name)
 		translators[name].SetSrcLang(
@@ -77,7 +152,13 @@ func configInit() {
 	uiStyle.Transparent = config.GetBool("transparent")
 	uiStyle.SetSrcBorderColor(config.GetString("source.border_color")).
 		SetDstBorderColor(config.GetString("destination.border_color"))
-	// set argument language
+	// Set API Keys
+	for _, name := range []string{"ChatGPT", "DeepL"} {
+		if config.Get(fmt.Sprintf("api_key.%s", name)) != nil {
+			translators[name].SetAPIKey(config.GetString(fmt.Sprintf("api_key.%s", name)))
+		}
+	}
+	// Set argument language
 	if len(*srcLangArg) > 0 {
 		translator.SetSrcLang(*srcLangArg)
 	}

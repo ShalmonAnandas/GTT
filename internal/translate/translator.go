@@ -1,14 +1,26 @@
 package translate
 
 import (
-	"github.com/eeeXun/gtt/internal/translate/apertiumtranslate"
-	"github.com/eeeXun/gtt/internal/translate/argostranslate"
-	"github.com/eeeXun/gtt/internal/translate/googletranslate"
-	"github.com/eeeXun/gtt/internal/translate/reversotranslate"
+	"github.com/eeeXun/gtt/internal/translate/apertium"
+	"github.com/eeeXun/gtt/internal/translate/argos"
+	"github.com/eeeXun/gtt/internal/translate/bing"
+	"github.com/eeeXun/gtt/internal/translate/chatgpt"
+	"github.com/eeeXun/gtt/internal/translate/core"
+	"github.com/eeeXun/gtt/internal/translate/deepl"
+	"github.com/eeeXun/gtt/internal/translate/google"
+	"github.com/eeeXun/gtt/internal/translate/reverso"
 )
 
 var (
-	AllTranslator = []string{"ApertiumTranslate", "ArgosTranslate", "GoogleTranslate", "ReversoTranslate"}
+	AllTranslator = []string{
+		"Apertium",
+		"Argos",
+		"Bing",
+		"ChatGPT",
+		"DeepL",
+		"Google",
+		"Reverso",
+	}
 )
 
 type Translator interface {
@@ -33,6 +45,9 @@ type Translator interface {
 	// Swap source and destination language of the translator
 	SwapLang()
 
+	// Set API Key
+	SetAPIKey(key string)
+
 	// Check if lock is available
 	LockAvailable() bool
 
@@ -43,7 +58,7 @@ type Translator interface {
 	StopTTS()
 
 	// Translate from source to destination language
-	Translate(message string) (translation, definition, partOfSpeech string, err error)
+	Translate(message string) (translation *core.Translation, err error)
 
 	// Play text to speech
 	PlayTTS(lang, message string) error
@@ -53,14 +68,20 @@ func NewTranslator(name string) Translator {
 	var translator Translator
 
 	switch name {
-	case "ApertiumTranslate":
-		translator = apertiumtranslate.NewApertiumTranslate()
-	case "ArgosTranslate":
-		translator = argostranslate.NewArgosTranslate()
-	case "GoogleTranslate":
-		translator = googletranslate.NewGoogleTranslate()
-	case "ReversoTranslate":
-		translator = reversotranslate.NewReversoTranslate()
+	case "Apertium":
+		translator = apertium.NewTranslator()
+	case "Argos":
+		translator = argos.NewTranslator()
+	case "Bing":
+		translator = bing.NewTranslator()
+	case "ChatGPT":
+		translator = chatgpt.NewTranslator()
+	case "DeepL":
+		translator = deepl.NewTranslator()
+	case "Google":
+		translator = google.NewTranslator()
+	case "Reverso":
+		translator = reverso.NewTranslator()
 	}
 
 	return translator
