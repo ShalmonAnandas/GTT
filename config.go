@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/eeeXun/gtt/internal/style"
 	"github.com/eeeXun/gtt/internal/translate"
@@ -20,6 +21,7 @@ func configInit() {
 		defaultConfigPath string
 		themeConfig       = viper.New()
 		keyMapConfig      = viper.New()
+		serverConfig      = viper.New()
 		defaultKeyMaps    = map[string]string{
 			"exit":               "C-c",
 			"translate":          "C-j",
@@ -35,6 +37,7 @@ func configInit() {
 			"toggle_below":       "C-\\",
 		}
 		defaultConfig = map[string]interface{}{
+			"osc52":                         false,
 			"hide_below":                    false,
 			"transparent":                   false,
 			"theme":                         "gruvbox",
@@ -42,16 +45,18 @@ func configInit() {
 			"destination.border_color":      "blue",
 			"source.language.apertium":      "English",
 			"destination.language.apertium": "English",
-			"source.language.argos":         "English",
-			"destination.language.argos":    "English",
 			"source.language.bing":          "English",
 			"destination.language.bing":     "English",
 			"source.language.chatgpt":       "English",
 			"destination.language.chatgpt":  "English",
 			"source.language.deepl":         "English",
 			"destination.language.deepl":    "English",
+			"source.language.deeplx":        "English",
+			"destination.language.deeplx":   "English",
 			"source.language.google":        "English",
 			"destination.language.google":   "English",
+			"source.language.libre":         "English",
+			"destination.language.libre":    "English",
 			"source.language.reverso":       "English",
 			"destination.language.reverso":  "English",
 			"translator":                    "Google",
@@ -61,18 +66,19 @@ func configInit() {
 	config.SetConfigName("gtt")
 	themeConfig.SetConfigName("theme")
 	keyMapConfig.SetConfigName("keymap")
-	for _, c := range []*viper.Viper{config, themeConfig, keyMapConfig} {
+	serverConfig.SetConfigName("server")
+	for _, c := range []*viper.Viper{config, themeConfig, keyMapConfig, serverConfig} {
 		c.SetConfigType("yaml")
 	}
 	if len(os.Getenv("XDG_CONFIG_HOME")) > 0 {
 		defaultConfigPath = os.Getenv("XDG_CONFIG_HOME") + "/gtt"
-		for _, c := range []*viper.Viper{config, themeConfig, keyMapConfig} {
+		for _, c := range []*viper.Viper{config, themeConfig, keyMapConfig, serverConfig} {
 			c.AddConfigPath(defaultConfigPath)
 		}
 	} else {
 		defaultConfigPath = os.Getenv("HOME") + "/.config/gtt"
 	}
-	for _, c := range []*viper.Viper{config, themeConfig, keyMapConfig} {
+	for _, c := range []*viper.Viper{config, themeConfig, keyMapConfig, serverConfig} {
 		c.AddConfigPath("$HOME/.config/gtt")
 	}
 
@@ -148,14 +154,30 @@ func configInit() {
 	}
 	translator = translators[config.GetString("translator")]
 	uiStyle.Theme = config.GetString("theme")
+	uiStyle.OSC52 = config.GetBool("osc52")
 	uiStyle.HideBelow = config.GetBool("hide_below")
 	uiStyle.Transparent = config.GetBool("transparent")
 	uiStyle.SetSrcBorderColor(config.GetString("source.border_color")).
 		SetDstBorderColor(config.GetString("destination.border_color"))
-	// Set API Keys
-	for _, name := range []string{"ChatGPT", "DeepL"} {
-		if config.Get(fmt.Sprintf("api_key.%s", name)) != nil {
-			translators[name].SetAPIKey(config.GetString(fmt.Sprintf("api_key.%s", name)))
+	// Import api key and host if file exists
+	if err := serverConfig.ReadInConfig(); err == nil {
+		// api key
+		for _, name := range []string{"ChatGPT", "DeepL", "DeepLX", "Libre"} {
+			// Read from value first, then read from file
+			if serverConfig.Get(fmt.Sprintf("api_key.%s.value", name)) != nil {
+				translators[name].SetAPIKey(serverConfig.GetString(fmt.Sprintf("api_key.%s.value", name)))
+			} else if serverConfig.Get(fmt.Sprintf("api_key.%s.file", name)) != nil {
+				buff, err := os.ReadFile(os.ExpandEnv(serverConfig.GetString(fmt.Sprintf("api_key.%s.file", name))))
+				if err == nil {
+					translators[name].SetAPIKey(strings.TrimSpace(string(buff)))
+				}
+			}
+		}
+		// host
+		for _, name := range []string{"DeepLX", "Libre"} {
+			if serverConfig.Get(fmt.Sprintf("host.%s", name)) != nil {
+				translators[name].SetHost(serverConfig.GetString(fmt.Sprintf("host.%s", name)))
+			}
 		}
 	}
 	// Set argument language
@@ -193,10 +215,6 @@ func updateConfig() {
 		changed = true
 		config.Set("translator", translator.GetEngineName())
 	}
-	if config.GetBool("hide_below") != uiStyle.HideBelow {
-		changed = true
-		config.Set("hide_below", uiStyle.HideBelow)
-	}
 	if config.GetString("theme") != uiStyle.Theme {
 		changed = true
 		config.Set("theme", uiStyle.Theme)
@@ -204,6 +222,14 @@ func updateConfig() {
 	if config.GetBool("transparent") != uiStyle.Transparent {
 		changed = true
 		config.Set("transparent", uiStyle.Transparent)
+	}
+	if config.GetBool("hide_below") != uiStyle.HideBelow {
+		changed = true
+		config.Set("hide_below", uiStyle.HideBelow)
+	}
+	if config.GetBool("osc52") != uiStyle.OSC52 {
+		changed = true
+		config.Set("osc52", uiStyle.OSC52)
 	}
 	if config.GetString("source.border_color") != uiStyle.SrcBorderStr() {
 		changed = true

@@ -2,23 +2,24 @@ package translate
 
 import (
 	"github.com/eeeXun/gtt/internal/translate/apertium"
-	"github.com/eeeXun/gtt/internal/translate/argos"
 	"github.com/eeeXun/gtt/internal/translate/bing"
 	"github.com/eeeXun/gtt/internal/translate/chatgpt"
 	"github.com/eeeXun/gtt/internal/translate/core"
 	"github.com/eeeXun/gtt/internal/translate/deepl"
 	"github.com/eeeXun/gtt/internal/translate/google"
+	"github.com/eeeXun/gtt/internal/translate/libre"
 	"github.com/eeeXun/gtt/internal/translate/reverso"
 )
 
 var (
 	AllTranslator = []string{
 		"Apertium",
-		"Argos",
 		"Bing",
 		"ChatGPT",
 		"DeepL",
+		"DeepLX",
 		"Google",
+		"Libre",
 		"Reverso",
 	}
 )
@@ -48,6 +49,9 @@ type Translator interface {
 	// Set API Key
 	SetAPIKey(key string)
 
+	// Set host
+	SetHost(host string)
+
 	// Check if lock is available
 	LockAvailable() bool
 
@@ -70,16 +74,16 @@ func NewTranslator(name string) Translator {
 	switch name {
 	case "Apertium":
 		translator = apertium.NewTranslator()
-	case "Argos":
-		translator = argos.NewTranslator()
 	case "Bing":
 		translator = bing.NewTranslator()
 	case "ChatGPT":
 		translator = chatgpt.NewTranslator()
-	case "DeepL":
-		translator = deepl.NewTranslator()
+	case "DeepL", "DeepLX":
+		translator = deepl.NewTranslator(name)
 	case "Google":
 		translator = google.NewTranslator()
+	case "Libre":
+		translator = libre.NewTranslator()
 	case "Reverso":
 		translator = reverso.NewTranslator()
 	}

@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 
 	"github.com/eeeXun/gtt/internal/translate/core"
@@ -16,17 +16,17 @@ const (
 )
 
 type Translator struct {
-	*core.APIKey
+	*core.Server
 	*core.Language
-	*core.TTSLock
+	*core.TTS
 	core.EngineName
 }
 
 func NewTranslator() *Translator {
 	return &Translator{
-		APIKey:     new(core.APIKey),
+		Server:     new(core.Server),
 		Language:   new(core.Language),
-		TTSLock:    core.NewTTSLock(),
+		TTS:        core.NewTTS(),
 		EngineName: core.NewEngineName("ChatGPT"),
 	}
 }
@@ -66,7 +66,7 @@ func (t *Translator) Translate(message string) (translation *core.Translation, e
 	if err != nil {
 		return nil, err
 	}
-	body, err := ioutil.ReadAll(res.Body)
+	body, err := io.ReadAll(res.Body)
 	if err != nil {
 		return nil, err
 	}

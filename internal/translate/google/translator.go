@@ -4,14 +4,11 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"net/url"
-	"time"
 
 	"github.com/eeeXun/gtt/internal/translate/core"
-	"github.com/hajimehoshi/go-mp3"
-	"github.com/hajimehoshi/oto/v2"
 )
 
 const (
@@ -20,17 +17,17 @@ const (
 )
 
 type Translator struct {
-	*core.APIKey
+	*core.Server
 	*core.Language
-	*core.TTSLock
+	*core.TTS
 	core.EngineName
 }
 
 func NewTranslator() *Translator {
 	return &Translator{
-		APIKey:     new(core.APIKey),
+		Server:     new(core.Server),
 		Language:   new(core.Language),
-		TTSLock:    core.NewTTSLock(),
+		TTS:        core.NewTTS(),
 		EngineName: core.NewEngineName("Google"),
 	}
 }
@@ -53,7 +50,7 @@ func (t *Translator) Translate(message string) (translation *core.Translation, e
 	if err != nil {
 		return nil, err
 	}
-	body, err := ioutil.ReadAll(res.Body)
+	body, err := io.ReadAll(res.Body)
 	if err != nil {
 		return nil, err
 	}
@@ -135,26 +132,5 @@ func (t *Translator) PlayTTS(lang, message string) error {
 	if res.StatusCode == 400 {
 		return errors.New(t.GetEngineName() + " does not support text to speech of " + lang)
 	}
-	decoder, err := mp3.NewDecoder(res.Body)
-	if err != nil {
-		return err
-	}
-	otoCtx, readyChan, err := oto.NewContext(decoder.SampleRate(), 2, 2)
-	if err != nil {
-		return err
-	}
-	<-readyChan
-	player := otoCtx.NewPlayer(decoder)
-	player.Play()
-	for player.IsPlaying() {
-		if t.IsStopped() {
-			return nil
-		}
-		time.Sleep(time.Millisecond)
-	}
-	if err = player.Close(); err != nil {
-		return err
-	}
-
-	return nil
+	return t.Play(res.Body)
 }

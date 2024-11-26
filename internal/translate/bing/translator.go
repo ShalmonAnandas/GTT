@@ -4,16 +4,13 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"net/url"
 	"regexp"
 	"strings"
-	"time"
 
 	"github.com/eeeXun/gtt/internal/translate/core"
-	"github.com/hajimehoshi/go-mp3"
-	"github.com/hajimehoshi/oto/v2"
 )
 
 const (
@@ -25,9 +22,9 @@ const (
 )
 
 type Translator struct {
-	*core.APIKey
+	*core.Server
 	*core.Language
-	*core.TTSLock
+	*core.TTS
 	core.EngineName
 }
 
@@ -40,9 +37,9 @@ type setUpData struct {
 
 func NewTranslator() *Translator {
 	return &Translator{
-		APIKey:     new(core.APIKey),
+		Server:     new(core.Server),
 		Language:   new(core.Language),
-		TTSLock:    core.NewTTSLock(),
+		TTS:        core.NewTTS(),
 		EngineName: core.NewEngineName("Bing"),
 	}
 }
@@ -58,7 +55,7 @@ func (t *Translator) setUp() (*setUpData, error) {
 	if err != nil {
 		return nil, err
 	}
-	body, err := ioutil.ReadAll(res.Body)
+	body, err := io.ReadAll(res.Body)
 	if err != nil {
 		return nil, err
 	}
@@ -99,7 +96,7 @@ func (t *Translator) Translate(message string) (translation *core.Translation, e
 		"key":      {initData.key},
 		"token":    {initData.token},
 	}
-	req, err := http.NewRequest(http.MethodPost,
+	req, _ := http.NewRequest(http.MethodPost,
 		fmt.Sprintf(textURL, initData.ig, initData.iid),
 		strings.NewReader(userData.Encode()),
 	)
@@ -109,7 +106,7 @@ func (t *Translator) Translate(message string) (translation *core.Translation, e
 	if err != nil {
 		return nil, err
 	}
-	body, err := ioutil.ReadAll(res.Body)
+	body, err := io.ReadAll(res.Body)
 	if err != nil {
 		return nil, err
 	}
@@ -128,7 +125,7 @@ func (t *Translator) Translate(message string) (translation *core.Translation, e
 	// request part of speech
 	userData.Del("fromLang")
 	userData.Add("from", langCode[t.GetSrcLang()])
-	req, err = http.NewRequest(http.MethodPost,
+	req, _ = http.NewRequest(http.MethodPost,
 		fmt.Sprintf(posURL, initData.ig, initData.iid),
 		strings.NewReader(userData.Encode()),
 	)
@@ -138,27 +135,33 @@ func (t *Translator) Translate(message string) (translation *core.Translation, e
 	if err != nil {
 		return nil, err
 	}
-	body, err = ioutil.ReadAll(res.Body)
+	body, err = io.ReadAll(res.Body)
 	if err != nil {
 		return nil, err
 	}
 	// Bing will return the request with list when success.
 	// Otherwises, it would return map. Then the following err would not be nil.
-	if err = json.Unmarshal(body, &data); err == nil {
-		poses := make(posSet)
-		for _, pos := range data[0].(map[string]interface{})["translations"].([]interface{}) {
-			pos := pos.(map[string]interface{})
-			var words posWords
-
-			words.target = pos["displayTarget"].(string)
-			for _, backTranslation := range pos["backTranslations"].([]interface{}) {
-				backTranslation := backTranslation.(map[string]interface{})
-				words.add(backTranslation["displayText"].(string))
-			}
-			poses.add(pos["posTag"].(string), words)
-		}
-		translation.POS = poses.format()
+	if err = json.Unmarshal(body, &data); err != nil {
+		return nil, err
 	}
+
+	if len(data) <= 0 {
+		return nil, errors.New("Translation not found")
+	}
+
+	poses := make(posSet)
+	for _, pos := range data[0].(map[string]interface{})["translations"].([]interface{}) {
+		pos := pos.(map[string]interface{})
+		var words posWords
+
+		words.target = pos["displayTarget"].(string)
+		for _, backTranslation := range pos["backTranslations"].([]interface{}) {
+			backTranslation := backTranslation.(map[string]interface{})
+			words.add(backTranslation["displayText"].(string))
+		}
+		poses.add(pos["posTag"].(string), words)
+	}
+	translation.POS = poses.format()
 
 	return translation, nil
 }
@@ -182,7 +185,7 @@ func (t *Translator) PlayTTS(lang, message string) error {
 		"key":   {initData.key},
 		"token": {initData.token},
 	}
-	req, err := http.NewRequest(http.MethodPost,
+	req, _ := http.NewRequest(http.MethodPost,
 		fmt.Sprintf(ttsURL, initData.ig, initData.iid),
 		strings.NewReader(userData.Encode()),
 	)
@@ -192,26 +195,5 @@ func (t *Translator) PlayTTS(lang, message string) error {
 	if err != nil {
 		return err
 	}
-	decoder, err := mp3.NewDecoder(res.Body)
-	if err != nil {
-		return err
-	}
-	otoCtx, readyChan, err := oto.NewContext(decoder.SampleRate(), 2, 2)
-	if err != nil {
-		return err
-	}
-	<-readyChan
-	player := otoCtx.NewPlayer(decoder)
-	player.Play()
-	for player.IsPlaying() {
-		if t.IsStopped() {
-			return nil
-		}
-		time.Sleep(time.Millisecond)
-	}
-	if err = player.Close(); err != nil {
-		return err
-	}
-
-	return nil
+	return t.Play(res.Body)
 }
